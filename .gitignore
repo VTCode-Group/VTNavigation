@@ -1,0 +1,56 @@
+# Unity 项目根目录下的 .gitignore 文件
+
+# Unity 自动生成的文件夹
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+
+# 内存捕获和录制文件（通常体积较大）
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*.Ds_Store
+# Visual Studio 和 JetBrains Rider 缓存
+vs/
+idea/
+vscode/
+.idea/
+# Gradle 缓存目录
+gradle/
+.vsconfig
+.vs/
+.DS_Store
+
+# 自动生成的解决方案和项目文件
+ExportedObj/
+consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity 崩溃报告文件
+sysinfo.txt
+
+# 构建产物（如 APK、AAB 等）
+*.apk
+*.aab
+*.unitypackage
+
+# Addressables 打包文件和临时 Android 资源
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
