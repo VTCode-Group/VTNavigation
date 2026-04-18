@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using UnityEngine.Rendering;
-using VTNavigation.Geometry;
 using VTNavigation.Scene;
-using VTNavigation.Tree;
 
 namespace VTNavigation.Drawer
 {

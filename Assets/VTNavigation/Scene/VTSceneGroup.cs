@@ -1,26 +1,67 @@
-﻿using PlasticGui.WorkspaceWindow;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using VTNavigation.Editor;
 using VTNavigation.Geometry;
+using VTNavigation.Navigation;
 using VTNavigation.Tree;
 using VTNavigation.Util;
+using VTPartition.Scene;
+using HashCode = VTNavigation.Tree.HashCode;
 
 namespace VTNavigation.Scene
 {
-	public class VTSceneGroup
+	public enum ESceneStatus
+	{
+		Unloaded = 0,
+		Loading = 1,
+		Loaded = 2,
+	}
+	
+	public class VTSceneGroup:IMapGroup
 	{
 		private int m_SubSceneXCount;
 		private int m_SubSceneYCount;
 		private int m_SubSceneZCount;
 		private float m_MinVoxelSizeWS; //	World Size : Tree Size
 		private VTScene[] m_VTScenes;
+		private ESceneStatus[] m_VTScenesStatus;
+		private int[] m_VTScenesReferenceCounts;
 		private Bounds m_SceneBounds;
+
+		public VTSceneGroup(int subScenXCount, int subSceneYCount, int subSceneZCount, float minVoxelSizeWS,
+			Vector3 sceneOrigin)
+		{
+			m_SubSceneXCount = subScenXCount;
+			m_SubSceneYCount = subSceneYCount;
+			m_SubSceneZCount = subSceneZCount;
+			m_MinVoxelSizeWS = minVoxelSizeWS;
+			
+			float sceneSize = CalcSceneSize(minVoxelSizeWS);
+			Vector3 totalSize = new Vector3(
+				subScenXCount * sceneSize,
+				subSceneYCount * sceneSize,
+				subSceneZCount * sceneSize);
+			Bounds sceneBounds = new Bounds(sceneOrigin + totalSize * 0.5f, totalSize);
+
+			m_SceneBounds = sceneBounds;
+			
+			m_VTScenes = new VTScene[SubSceneCount];
+			m_VTScenesStatus = new ESceneStatus[SubSceneCount];
+			m_VTScenesReferenceCounts = new int[SubSceneCount];
+			
+			Array.Fill(m_VTScenesStatus, ESceneStatus.Unloaded);
+			Array.Fill(m_VTScenesReferenceCounts, 0);
+		}
+
+		private float SceneSize
+		{
+			get
+			{
+				return CalcSceneSize(m_MinVoxelSizeWS);
+			}
+		}
 
 		public Bounds SceneBounds
 		{
@@ -75,6 +116,34 @@ namespace VTNavigation.Scene
 
 		}
 
+		public void SetSubScene(int x, int y, int z, VTScene scene)
+		{
+			int index = GetIndex(x, y, z);
+			if (index < 0 || index >= SubSceneCount)
+				return;
+			m_VTScenes[index] = scene;
+			scene.XIndex = x;
+			scene.YIndex = y;
+			scene.ZIndex = z;
+		}
+
+		public VTScene ReferenceSubScene(int x, int y, int z)
+		{
+			int index = GetIndex(x, y, z);
+			if (index < 0 || index >= SubSceneCount)
+				return null;
+			m_VTScenesReferenceCounts[index]++;
+			return m_VTScenes[index];
+		}
+
+		public void UnReferenceSubScene(int x, int y, int z)
+		{
+			int index = GetIndex(x, y, z);
+			if (index < 0 || index >= SubSceneCount)
+				return;
+			m_VTScenesReferenceCounts[index]--;
+		}
+
 		public VTScene this[int x, int y, int z]
 		{
 			get
@@ -83,8 +152,8 @@ namespace VTNavigation.Scene
 				if (index < 0 || index >= SubSceneCount)
 					return null;
 				return m_VTScenes[index];
-			}
-			private set
+			} 
+			set
 			{
 				int index = GetIndex(x, y, z);
 				if (index < 0)
@@ -222,7 +291,199 @@ namespace VTNavigation.Scene
 			bounds = null;
 			return false;
 		}
+		
+		public void GetWalkableAreas(MapHashCode mapHashCode, HashSet<MapHashCode> ignoreSet, out List<MapHashCode> result)
+		{
+			result = new List<MapHashCode>();
+			GetWalkableAreasInternal(mapHashCode, ignoreSet, result,-1, 0, 0);
+			GetWalkableAreasInternal(mapHashCode, ignoreSet, result, 1, 0, 0);
+			GetWalkableAreasInternal(mapHashCode, ignoreSet, result, 0,-1, 0);
+			GetWalkableAreasInternal(mapHashCode, ignoreSet, result, 0, 1, 0);
+			GetWalkableAreasInternal(mapHashCode, ignoreSet, result, 0, 0,-1);
+			GetWalkableAreasInternal(mapHashCode, ignoreSet, result, 0, 0, 1);
+		}
 
+		private void GetWalkableAreasInternal(MapHashCode mapHashCode, HashSet<MapHashCode> ignoreSet,List<MapHashCode> result,
+			int xoffset, int yoffset, int zoffset)
+		{
+			MapHashCode nextMapHashCode = ToNextHashCode(mapHashCode, xoffset, yoffset, zoffset);
+			IMap nextMap = nextMapHashCode.map;
+			HashCode nextCode = nextMapHashCode.hashCode;
+			if (nextMap == null || !nextCode.IsValide || nextMap.IsBlock(nextCode))
+			{
+				return;
+			}
+
+			if (!nextMap.IsSparse(nextCode))
+			{
+				if (!ignoreSet.Contains(nextMapHashCode))
+				{
+					result.Add(nextMapHashCode);
+				}
+			}
+			else
+			{
+				List<HashCode> edgeFreeSpaceCodes = new List<HashCode>();
+				int filterXMask = -1; 
+				int filterYMask = -1;
+				int filterZMask = -1;
+				if (xoffset != 0)
+				{
+					filterXMask = xoffset == 1 ? 0 : 1;
+				}
+
+				if (yoffset != 0)
+				{
+					filterYMask = yoffset == 1 ? 0 : 1;
+				}
+
+				if (zoffset != 0)
+				{
+					filterZMask = zoffset == 1 ? 0 : 1;
+				}
+ 				nextMap.GetEdgeFreeSpace(nextCode, edgeFreeSpaceCodes, filterXMask, filterYMask, filterZMask);
+			    for (int i = 0; i < edgeFreeSpaceCodes.Count; i++)
+			    {
+				    MapHashCode edgeFreeSpace = new MapHashCode(){map = nextMap, hashCode = edgeFreeSpaceCodes[i]};
+				    if (!ignoreSet.Contains(edgeFreeSpace))
+				    {
+					    result.Add(edgeFreeSpace);
+				    }
+			    }
+			}
+		}
+		
+		private static float CalcSceneSize(float voxelSize)
+		{
+			return 1024f * voxelSize;
+		}
+		
+		#region ------Navigation Map------
+
+		public IMap GetMap(int x, int y, int z)
+		{
+			if (m_VTScenes.Length <= 0)
+			{
+				return null;
+			}
+			if (x < 0 || x >= m_SubSceneXCount || y < 0 || y >= m_SubSceneYCount || z < 0 || z >= m_SubSceneZCount)
+			{
+				return null;
+			}
+			
+			int index = GetIndex(x, y, z);
+			return m_VTScenes[index];
+		}
+
+		public IMap GetMap(Vector3 position)
+		{
+			if (m_VTScenes.Length <= 0)
+			{
+				return null;
+			}
+			if (!m_SceneBounds.Contains(position))
+			{
+				return null;
+			}
+			Vector3 offset = position - Origin;
+			float sceneSize = SceneSize;
+			int x = Mathf.FloorToInt(offset.x / sceneSize);
+			int y = Mathf.FloorToInt(offset.y / sceneSize);
+			int z = Mathf.FloorToInt(offset.z / sceneSize);
+
+			return GetMap(x, y, z);
+		}
+
+		public MapHashCode GetHashCode(Vector3 position, int layer = 0)
+		{
+			VTScene scene = (VTScene)GetMap(position);
+			if (scene == null)
+			{
+				return new MapHashCode(){map = null, hashCode = HashCode.INVALID_CODE};
+			}
+
+			return new MapHashCode() { map = scene, hashCode = scene.GetHashCode(position, layer) };
+		}
+
+		public MapHashCode ToNextHashCode(MapHashCode mapHashCode, int xoffset, int yoffset, int zoffset)
+		{
+			mapHashCode.hashCode.Decode(out UInt32 x, out UInt32 y, out UInt32 z, out int layer);
+			int coordinateCount = HashCode.LayerCoordinateCount(layer);
+			
+			int nextX = (int)x + xoffset;
+			int nextY = (int)y + yoffset;
+			int nextZ = (int)z + zoffset;
+
+			(int subSceneX, int subSceneY, int subSceneZ) = mapHashCode.map.GetSubSceneIndex();
+			
+			IMap nextMap = mapHashCode.map;
+			if (nextX < 0 || nextY < 0 || nextZ < 0 || nextX >= coordinateCount || nextY >= coordinateCount ||
+			    nextZ >= coordinateCount)
+			{
+				//	超出curMap
+				if (nextX < 0)
+				{
+					subSceneX--;
+					nextX = coordinateCount + nextX;
+				}
+				else if (nextX >= coordinateCount)
+				{
+					subSceneX++;
+					nextX = nextX - coordinateCount;
+				}
+
+				if (nextY < 0)
+				{
+					subSceneY--;
+					nextY = coordinateCount + nextY;
+				}
+				else if (nextY >= coordinateCount)
+				{
+					subSceneY++;
+					nextY = nextY - coordinateCount;
+				}
+
+				if (nextZ < 0)
+				{
+					subSceneZ--;
+					nextZ = coordinateCount + nextZ;
+				}
+				else if (nextZ >= coordinateCount)
+				{
+					subSceneZ++;
+					nextZ = nextZ - coordinateCount;
+				}
+
+				nextMap = GetMap(subSceneX, subSceneY, subSceneZ);
+				if (nextMap == null)
+				{
+					return new MapHashCode() { map = null, hashCode = HashCode.INVALID_CODE };
+				}
+			}
+
+			return new MapHashCode()
+			{
+				map = nextMap, 
+				hashCode = HashCode.Encode((UInt32)nextX, (UInt32)nextY, (UInt32)nextZ, layer)
+			};
+		}
+
+		#endregion
+		
+		private void ForeachScene(Action<int, int, int, int, VTScene> callback)
+		{
+			for (int x = 0; x < m_SubSceneXCount; x++)
+			{
+				for (int z = 0; z < m_SubSceneZCount; z++)
+				{
+					for (int y = 0; y < m_SubSceneYCount; y++)
+					{
+						int index = GetIndex(x, y, z);
+						callback(x, y, z, index, m_VTScenes[index]);
+					}
+				}
+			}
+		}
 #if UNITY_EDITOR
 
 		public BakeWork BakeVTSceneWithCustomVoxelSize(float minVoxelSize = 1.0f)
@@ -291,9 +552,10 @@ namespace VTNavigation.Scene
 			return blockBounds;
 		}
 
-		public void WriteToFile(string fileName)
+		public void WriteToFile(string outputFolder, string sceneName)
 		{
-			using (var fs = File.Create(fileName))
+			string groupFilePath = Path.Combine(outputFolder, sceneName + ".vtgroup");
+			using (var fs = File.Create(groupFilePath))
 			{
 				using (var bw = new BinaryWriter(fs))
 				{
@@ -304,22 +566,25 @@ namespace VTNavigation.Scene
 					IOUtil.WriteBounds(bw, m_SceneBounds);
 				}
 			}
+			
+			WriteVTSceneToDirectory(outputFolder, sceneName);
+		}
+		
+		public void BlockAllNodesInLayer(int layer)
+		{
+			ForeachScene((int x, int y, int z, int index, VTScene scene) =>
+			{
+				scene.BlockAllNodesInLayer(layer);
+			});
 		}
 
-		public void WriteVTSceneToDirectory(string directory, string sceneName)
+		public void WriteVTSceneToDirectory(string outputFolder, string sceneName)
 		{
-			for (int x = 0; x < m_SubSceneXCount; x++)
+			ForeachScene((int x, int y, int z, int index, VTScene scene) =>
 			{
-				for (int z = 0; z < m_SubSceneZCount; z++)
-				{
-					for (int y = 0; y < m_SubSceneYCount; y++)
-					{
-						VTScene scene = this[x, y, z];
-						string path = Path.Combine(directory, sceneName + $"_{x}_{y}_{z}.vtscene");
-						scene.WriteToFile(path);
-					}
-				}
-			}
+				string subSceneFilePath = Path.Combine(outputFolder,  sceneName + $"_{x}_{y}_{z}.vtscene");
+				scene.WriteToFile(subSceneFilePath);
+			});
 		}
 #endif
 

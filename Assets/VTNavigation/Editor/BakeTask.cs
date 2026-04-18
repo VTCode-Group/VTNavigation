@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 using VTNavigation.Geometry;
 using VTNavigation.Scene;
 using VTNavigation.Tree;
+using VTPartition.Editor;
+using VTPartition.Scene;
 
 namespace VTNavigation.Editor
 {
@@ -67,8 +68,8 @@ namespace VTNavigation.Editor
 		
 		public void Run()
 		{
-			VTSceneUtil.ToTreeSpace(m_Scene, m_Triangles);
-			VTSceneUtil.ToTreeSpace(m_Scene, m_Bounds);
+			m_Scene.ToTreeSpace(m_Triangles);
+			m_Scene.ToTreeSpace(m_Bounds);
 
 			int processCountInterval = 20;
 			for(int i = 0;i<m_Triangles.Count;i++)

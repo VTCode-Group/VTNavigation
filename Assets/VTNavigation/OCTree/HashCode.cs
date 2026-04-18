@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using VTCodeSpace;
 
@@ -75,7 +73,7 @@ namespace VTNavigation.Tree
 		{
 			get
 			{
-				return Mathf.Pow(2, VTCode.MAX_LAYER);
+				return VTCode.POW_MAPPING[VTCode.MAX_LAYER];
 			}
 		}
         
@@ -140,9 +138,8 @@ namespace VTNavigation.Tree
         {
             Decode(out UInt32 x, out UInt32 y, out UInt32 z, out int layer);
 
-            float sizeInLayer = Mathf.Pow(2, layer);
-            Vector3 min = new Vector3(x,y,z);
-            min *= sizeInLayer;
+            float sizeInLayer = VTCode.POW_MAPPING[Layer];
+            Vector3 min = new Vector3(x* sizeInLayer, y* sizeInLayer, z* sizeInLayer);
             Vector3 max = min + Vector3.one*sizeInLayer;
             Vector3 center = (min + max) * 0.5f;
             Vector3 size = new Vector3(sizeInLayer, sizeInLayer, sizeInLayer);
@@ -180,8 +177,75 @@ namespace VTNavigation.Tree
 		{
 			return other.m_VTCode == m_VTCode;
 		}
+		
+		public HashCode ToLeft()
+		{
+			(bool overflow, UInt32 code) = VTCode.EncodeToNegativeAdjX(m_VTCode);
+			return !overflow ? new HashCode(code) : INVALID_CODE;
+		}
+
+		public HashCode ToRight()
+		{
+			(bool overflow, UInt32 code) = VTCode.EncodeToPositiveAdjX(m_VTCode);
+			return !overflow ? new HashCode(code) : INVALID_CODE;
+		}
+
+		public HashCode ToBottom()
+		{
+			(bool overflow,  UInt32 code) = VTCode.EncodeToNegativeAdjY(m_VTCode);
+			return !overflow? new HashCode(code) : INVALID_CODE;
+		}
+
+		public HashCode ToTop()
+		{
+			(bool overflow, UInt32 code) = VTCode.EncodeToPositiveAdjY(m_VTCode);
+			return !overflow? new HashCode(code) : INVALID_CODE;
+		}
+
+		public HashCode ToFront()
+		{
+			(bool overflow, UInt32 code) = VTCode.EncodeToPositiveAdjZ(m_VTCode);
+			return !overflow? new HashCode(code) : INVALID_CODE;
+		}
+		
+		public HashCode ToBack()
+		{
+			(bool overflow, UInt32 code) = VTCode.EncodeToNegativeAdjZ(m_VTCode);
+			return !overflow? new HashCode(code) : INVALID_CODE;
+		}
 
 		public static HashCode INVALID_CODE = new HashCode(VTCode.INVALID_CODE);
+		
+		public static HashCode GetHashCodeWithPoint(Vector3 point, int layer = 0)
+		{
+			UInt32 size = VTCode.POW_MAPPING[layer];
+			UInt32 x = (UInt32)Mathf.FloorToInt(point.x/size);
+			UInt32 y = (UInt32)Mathf.FloorToInt(point.y/size);
+			UInt32 z = (UInt32)Mathf.FloorToInt(point.z/size);
+			return HashCode.Encode(x, y, z, layer);
+		}
+		
+		public static HashCode PositionToHashCode(Vector3 position, int layer = 0)
+		{
+			float layerSize = VTCode.POW_MAPPING[layer];
+			UInt32 x = (UInt32)(position.x / layerSize);
+			UInt32 y = (UInt32)(position.y / layerSize);
+			UInt32 z = (UInt32)(position.z / layerSize);
+			return new HashCode(VTCode.Encode(x,y,z,layer));
+		}
+
+		public static float LayerToSize(int layer)
+		{
+			if (layer < 0) layer = 0;
+			if (layer > VTCode.MAX_LAYER) return Mathf.Pow(2, layer);
+			return VTCode.POW_MAPPING[layer];
+		}
+
+		public static int LayerCoordinateCount(int layer)
+		{
+			if (layer < 0) layer = 0;
+			return (int)Mathf.Pow(2, VTCode.MAX_LAYER - layer);
+		}
 	}
 }
 

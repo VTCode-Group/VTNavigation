@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 
-namespace VTNavigation.Editor
+namespace VTPartition.Editor
 {
 	public class BakeTreeProgress
 	{

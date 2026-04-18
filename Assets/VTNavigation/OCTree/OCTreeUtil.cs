@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace VTNavigation.Tree
@@ -83,6 +82,46 @@ namespace VTNavigation.Tree
 		public static void SetBlockStatus(ref byte status, int offset)
 		{
 			status |= (byte)(1 << offset);
+		}
+		
+		public static bool BitCheck(byte flag, int offset)
+		{
+			return (flag & (1 << offset)) > 0;
+		}
+		
+		public static int GetChildOffsetXFromIndex(int index)
+		{
+			return BitCheck((byte)index, 0) ? 1 : -1;
+		}
+
+		public static int GetChildOffsetZFromIndex(int index)
+		{
+			return BitCheck((byte)index, 1) ? 1 : -1;
+		}
+
+		public static int GetChildOffsetYFromIndex(int index)
+		{
+			return BitCheck((byte)index, 2) ? 1 : -1;
+		}
+
+		public static Bounds GetChildBounds(Bounds bounds, int x, int y, int z)
+		{
+			Vector3 min = bounds.min;
+			var halfSize = bounds.extents;
+			min.x += ((x+1)/2 * halfSize.x);
+			min.y += ((y+1)/2 * halfSize.y);
+			min.z += ((z+1)/2 * halfSize.z);
+			Vector3 center = min + halfSize*0.5f;
+			return new Bounds(center, halfSize);
+		}
+
+		public static Bounds GetChildBounds(Bounds bounds, int index)
+		{
+			var offsetX = GetChildOffsetXFromIndex(index);
+			var offsetY = GetChildOffsetYFromIndex(index);
+			var offsetZ = GetChildOffsetZFromIndex(index);
+
+			return GetChildBounds(bounds, offsetX, offsetY, offsetZ);
 		}
 	}
 }
