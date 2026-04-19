@@ -14,6 +14,8 @@ namespace VTNavigation.Navigation
 		
 		public bool m_IsTraceState;
 
+		public float m_RotatePower;
+
 		public bool IsTraceState
 		{
 			get {  return m_IsTraceState; }
@@ -56,6 +58,7 @@ namespace VTNavigation.Navigation
 				{
 					transform.position = nextPosition;
 				}
+				transform.forward = Vector3.Lerp(transform.forward,moveDirection,m_RotatePower*Time.deltaTime);
 			}
 
 #if UNITY_EDITOR

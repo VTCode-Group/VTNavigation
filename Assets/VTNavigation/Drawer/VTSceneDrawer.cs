@@ -21,6 +21,8 @@ namespace VTNavigation.Drawer
 
 		public string m_VTSceneGroupFilePath;
 
+		public bool m_DrawPreviewScene = true;
+
 
 		private void Start()
 		{
@@ -70,7 +72,7 @@ namespace VTNavigation.Drawer
 
 		private void Update()
 		{
-			if (m_SceneGroup != null)
+			if (m_SceneGroup != null && m_DrawPreviewScene)
 			{
 				for (int i = 0; i < m_SceneGroup.SubSceneCount; i++)
 				{

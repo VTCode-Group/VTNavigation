@@ -33,14 +33,14 @@ namespace VTNavigation.Demo
 
 		private void LoadDemoScene()
 		{
-			byte[] sceneData = File.ReadAllBytes("Assets/Resources/Maze.vtgroup");
+			byte[] sceneData = File.ReadAllBytes("Assets/Resources/Demo.vtgroup");
 			if (sceneData == null || sceneData.Length <= 0)
 			{
 				Debug.LogError($"Read Scene Data Failed.");
 				return;
 			}
 			m_SceneGroup = new VTSceneGroup();
-			m_SceneGroup.ReadAllFromFile("Assets/Resources/Maze.vtgroup");
+			m_SceneGroup.ReadAllFromFile("Assets/Resources/Demo.vtgroup");
 		}
 	}
 }
