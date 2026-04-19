@@ -204,7 +204,10 @@ namespace VTPartition.Scene
 			MeshCollider[] meshColliders = UnityEngine.Object.FindObjectsOfType<MeshCollider>();
 			foreach (MeshCollider collider in meshColliders)
 			{
-				Mesh mesh = collider.sharedMesh;
+				if (!collider.enabled) continue;
+				MeshFilter meshFilter = collider.gameObject.GetComponent<MeshFilter>();
+				if (meshFilter == null) continue;
+				Mesh mesh = meshFilter.sharedMesh;
 				if (mesh == null) continue;
 				Matrix4x4 objectToWorld = collider.transform.localToWorldMatrix;
 				for (int i = 0; i < mesh.triangles.Length; i += 3)
