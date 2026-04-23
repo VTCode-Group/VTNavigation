@@ -116,6 +116,41 @@ namespace VTNavigation.Geometry
 			return SatForAxes(axes2, v0, v1, v2, extends);
 		}
 
+		public static bool IntersectsRayInside(this Bounds bounds, Ray ray, out float nearestDistance)
+		{
+			nearestDistance = 0;
+			if (!bounds.Contains(ray.origin))
+			{
+				return false;
+			}
+
+			Vector3 min = bounds.min;
+			Vector3 max = bounds.max;
+			Vector3 origin = ray.origin;
+			Vector3 direction = ray.direction;
+
+			float tExit = float.MaxValue;
+
+			for (int i = 0; i < 3; i++)
+			{
+				float dir = direction[i];
+				float ori = origin[i];
+
+				if (Mathf.Approximately(dir, 0f))
+				{
+					continue;
+				}
+
+				float t1 = (min[i] - ori) / dir;
+				float t2 = (max[i] - ori) / dir;
+				float tFar = Mathf.Max(t1, t2);
+				tExit = Mathf.Min(tExit, tFar);
+			}
+
+			nearestDistance = tExit;
+			return true;
+		}
+
 		public static bool OverlapTriangle(Box2D box, Triangle2D triangle)
 		{
 			for (int i = 0; i < 3; i++)

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -51,6 +52,16 @@ namespace VTNavigation.Demo
 		void Start()
 		{
 			StartCoroutine(TraceTargetProcedure());
+		}
+
+		public MoveUpAndDisappear targetPointController;
+		private void LateUpdate()
+		{
+			float distance = Vector3.Distance(m_Target.position, transform.position);
+			if (targetPointController.gameObject.activeSelf && distance <= 0.1f && !targetPointController.IsMoving)
+			{
+				targetPointController.Trigger();;
+			}
 		}
 	}
 }
