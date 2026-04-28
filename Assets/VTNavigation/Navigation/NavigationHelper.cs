@@ -58,7 +58,7 @@ namespace VTNavigation.Navigation
 	            pathSegments.Add(new PathSegment(){ map = currentMap, startIndex = currentStartIndex, endIndex = currentEndIndex});
             }
 
-            List<Vector3> smoothPathPoints = new List<Vector3>();
+            
             for (int i = 0; i < pathSegments.Count; i++)
             {
 	            IMap map = pathSegments[i].map;
@@ -68,22 +68,50 @@ namespace VTNavigation.Navigation
 	            {
 		            pathPoints[j] = map.ToWorldSpace(pathPoints[j]);
 	            }
-					
-	            if (endIndex - startIndex >= 2)
-	            {
-		            //	At least 3 points
-		            smoothPathPoints.AddRange(SmoothPath(map, pathPoints, startIndex, endIndex));
-	            }
-	            else
-	            {
-		            for (int j = startIndex; j <= endIndex;j++)
-		            {
-			            smoothPathPoints.Add(pathPoints[j]);
-		            }
-	            }
             }
-            
+
+            List<Vector3> smoothPathPoints = SmoothPath(mapGroup, pathPoints);
             return smoothPathPoints;
+        }
+
+        private static List<Vector3> SmoothPath(IMapGroup mapGroup, List<Vector3> path)
+        {
+	        if (path.Count == 2)
+	        {
+		        return path;
+	        }
+	        List<Vector3> res = new List<Vector3>();
+	        res.Add(path[0]);
+
+	        int basePointIndex = 0;
+	        while (basePointIndex < path.Count - 1)
+	        {
+		        int nextPointIndex = basePointIndex + 1;
+		        int targetPointIndex = path.Count;
+		        int mid = (nextPointIndex + targetPointIndex) >> 1;
+		        
+		        Vector3 basePoint = path[basePointIndex];
+		        
+		        while (mid < targetPointIndex && mid > nextPointIndex)
+		        {
+			        Vector3 midPoint = path[mid];
+			        Ray ray = new Ray(basePoint, (midPoint - basePoint).normalized);
+			        float distance = Vector3.Distance(midPoint, basePoint);
+			        if (!mapGroup.FastRayCastHit(ray, out float minDistance, 0.0f) || minDistance > distance)
+			        {
+				        nextPointIndex = mid;
+				        mid = (nextPointIndex + targetPointIndex) >> 1;
+			        }
+			        else
+			        {
+				        targetPointIndex = mid;
+				        mid = (targetPointIndex + nextPointIndex) >> 1;
+			        }
+		        }
+		        res.Add(path[nextPointIndex]);
+		        basePointIndex = nextPointIndex;
+	        }
+	        return res;
         }
 
         private static List<Vector3> SmoothPath(IMap map, List<Vector3> path, int startIndex, int endIndex)
@@ -110,7 +138,7 @@ namespace VTNavigation.Navigation
 			        Vector3 midPoint = path[mid];
 			        Ray ray = new Ray(basePoint, (midPoint - basePoint).normalized);
 			        float distance = Vector3.Distance(midPoint, basePoint);
-			        if (!map.RayCastHit(ray, out float minDistance, 0.0f) || minDistance > distance)
+			        if (!map.FastRayCastHit(ray, out float minDistance, 0.0f) || minDistance > distance)
 			        {
 				        nextPointIndex = mid;
 				        mid = (nextPointIndex + targetPointIndex) >> 1;

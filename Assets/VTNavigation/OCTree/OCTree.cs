@@ -628,6 +628,91 @@ namespace VTNavigation.Tree
 			}
 		}
 
+		public bool RayCastHit(Ray ray, out RayCastResult rayCastResult, float edageError = 0.2f)
+		{
+			if (!m_RootBounds.IntersectRay(ray))
+			{
+				rayCastResult = RayCastResult.Create();
+				rayCastResult.hit = false;
+				rayCastResult.distance = float.MaxValue;
+				return false;
+			}
+
+			HashCode hashCode = HashCode.GetHashCodeWithPoint(ray.origin, 0);
+			
+			if (IsBlock(hashCode))
+			{
+				rayCastResult = RayCastResult.Create();
+				rayCastResult.hit = true;
+				rayCastResult.distance = 0.0f;
+				rayCastResult.origin = ray.origin;
+				rayCastResult.position = ray.origin;
+				
+				rayCastResult.blockerBounds = hashCode.DecodeBounds();;
+				return true;
+			}
+			
+			return RayCastHit(ray, m_RootCode, out rayCastResult, edageError);
+		}
+
+		private bool RayCastHit(Ray ray, HashCode currentCode, out RayCastResult rayCastResult, float edageError = 0.2f)
+		{
+			rayCastResult = RayCastResult.Create();
+			rayCastResult.hit = false;
+			rayCastResult.distance = float.MaxValue;
+			for(int i = 0;i<8;i++)
+			{
+				HashCode childCode = currentCode.ToChild(i);
+				Bounds childBounds = childCode.DecodeBounds();
+				childBounds.Expand(edageError);
+				if (childBounds.Contains(ray.origin))
+				{
+					if (IsBlock(childCode))
+					{
+						rayCastResult.hit = true;
+						rayCastResult.distance = 0.0f;
+						rayCastResult.origin = ray.origin;
+						rayCastResult.position = ray.origin;
+						rayCastResult.blockerBounds = childCode.DecodeBounds();
+					}else if (m_TreeNodes.ContainsKey(childCode) &&
+					          RayCastHit(ray, childCode, out RayCastResult nextRayCastResult, edageError))
+					{
+						rayCastResult.hit = true;
+						if (rayCastResult.distance > nextRayCastResult.distance)
+						{
+							rayCastResult.distance = nextRayCastResult.distance;
+							rayCastResult.position = ray.GetPoint(rayCastResult.distance);
+							rayCastResult.blockerBounds = nextRayCastResult.blockerBounds;
+						}
+						rayCastResult.origin = ray.origin;
+					}
+				}else if (childBounds.IntersectRay(ray, out float minDistance))
+				{
+					if (IsBlock(childCode))
+					{
+						rayCastResult.hit = true;
+						rayCastResult.distance = Mathf.Min(minDistance, rayCastResult.distance);
+						rayCastResult.origin = ray.origin;
+						rayCastResult.position = ray.GetPoint(minDistance);
+						rayCastResult.blockerBounds = childCode.DecodeBounds();
+					}
+					else if(m_TreeNodes.ContainsKey(childCode) && RayCastHit(ray, childCode, out RayCastResult nextRayCastResult, edageError))
+					{
+						rayCastResult.hit = true;
+						if (rayCastResult.distance > nextRayCastResult.distance)
+						{
+							rayCastResult.distance = nextRayCastResult.distance;
+							rayCastResult.position = ray.GetPoint(rayCastResult.distance);
+							rayCastResult.blockerBounds = nextRayCastResult.blockerBounds;
+						}
+						rayCastResult.origin = ray.origin;
+					}
+				}
+			}
+
+			return rayCastResult.hit;
+		}
+
 		public bool FastRaycastHit(Ray ray, out RayCastResult rayCastResult, float edageError = 0.2f)
 		{
 			if (!m_RootBounds.IntersectRay(ray))

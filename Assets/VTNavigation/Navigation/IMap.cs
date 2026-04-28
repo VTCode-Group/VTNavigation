@@ -6,6 +6,8 @@ namespace VTNavigation.Navigation
 {
     public interface IMap
     {
+        public Bounds SceneBounds { get; }
+        
         public (int, int, int) GetSubSceneIndex();
         
         public bool IsBlock(HashCode hashCode);
@@ -29,6 +31,8 @@ namespace VTNavigation.Navigation
         public void GetEdgeFreeSpace(HashCode hashCode, List<HashCode> result,
             int filterXMask, int filterYMask, int filterZMask);
 
-        public bool RayCastHit(Ray ray, out float minDistance,float edageError = 0.2f);
+        public bool FastRayCastHit(Ray ray, out float minDistance,float edageError = 0.2f);
+        
+        public bool RayCastHit(Ray ray, out float minDistance, float edageError = 0.2f);
     }
 }

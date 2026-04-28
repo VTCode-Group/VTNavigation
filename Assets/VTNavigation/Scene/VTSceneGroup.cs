@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Profiling;
 using VTNavigation.Editor;
 using VTNavigation.Geometry;
 using VTNavigation.Navigation;
@@ -301,6 +302,40 @@ namespace VTNavigation.Scene
 			GetWalkableAreasInternal(mapHashCode, ignoreSet, result, 0, 1, 0);
 			GetWalkableAreasInternal(mapHashCode, ignoreSet, result, 0, 0,-1);
 			GetWalkableAreasInternal(mapHashCode, ignoreSet, result, 0, 0, 1);
+		}
+
+		public bool FastRayCastHit(Ray rayWS, out float minDistance, float edageError = 0.2f)
+		{
+			Profiler.BeginSample("RayCastHit");
+			minDistance = float.MaxValue;
+			if (!m_SceneBounds.Contains(rayWS.origin))
+			{
+				return false;
+			}
+
+			Ray currentRay = rayWS;
+			
+			bool hit = false;
+			do
+			{
+				IMap currentMap = GetMap(rayWS.origin);
+				
+				if(currentMap == null)break;
+				
+				hit = currentMap.FastRayCastHit(currentRay, out float resultMinDistance, edageError);
+				if (!hit)
+				{
+					currentMap.SceneBounds.IntersectsRayInside(currentRay, out float nearestDistance);
+					Vector3 intersectPoint = currentRay.GetPoint(nearestDistance) + currentRay.direction * 0.02f;
+					currentRay = new Ray(intersectPoint, rayWS.direction);
+				}
+				else
+				{
+					minDistance = resultMinDistance;
+				}
+			}while(!hit && m_SceneBounds.Contains(currentRay.origin));
+			Profiler.EndSample();
+			return hit;
 		}
 
 		private void GetWalkableAreasInternal(MapHashCode mapHashCode, HashSet<MapHashCode> ignoreSet,List<MapHashCode> result,

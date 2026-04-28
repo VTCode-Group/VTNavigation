@@ -250,11 +250,26 @@ namespace VTNavigation.Scene
 			m_Tree.GetEdgeFreeSpace(hashCode, result, filterXMask, filterYMask, filterZMask);
 		}
 
-		public bool RayCastHit(Ray rayWS, out float minDistance,float edageError = 0.2f)
+		public bool FastRayCastHit(Ray rayWS, out float minDistance,float edageError = 0.2f)
 		{
 			edageError = this.ToTreeSpace(edageError);
 			var rayTS = this.ToTreeSpace(rayWS);
 			m_Tree.FastRaycastHit(rayTS, out RayCastResult result, edageError);
+			if (result.hit)
+			{
+				result.distance = this.ToWorldSpace(result.distance);
+				result.blockerBounds = this.ToWorldSpace(result.blockerBounds);
+				result.origin = this.PointToWorldSpace(result.origin);
+			}
+			minDistance = result.hit? result.distance:float.MaxValue;
+			return result.hit;
+		}
+		
+		public bool RayCastHit(Ray rayWS, out float minDistance, float edageError = 0.2f)
+		{
+			edageError = this.ToTreeSpace(edageError);
+			var rayTS = this.ToTreeSpace(rayWS);
+			m_Tree.RayCastHit(rayTS, out RayCastResult result, edageError);
 			if (result.hit)
 			{
 				result.distance = this.ToWorldSpace(result.distance);

@@ -31,5 +31,7 @@ namespace VTNavigation.Navigation
 
         public void GetWalkableAreas(MapHashCode mapHashCode, HashSet<MapHashCode> ignoreSet,
             out List<MapHashCode> result);
+
+        public bool FastRayCastHit(Ray rayWS, out float minDistance, float edageError = 0.2f);
     }
 }
