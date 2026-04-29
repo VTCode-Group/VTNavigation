@@ -155,11 +155,12 @@ namespace VTNavigation.Navigation
 	        return res;
         }
 
-		private static float EvaluateWeight(Vector3 currentPosition, Vector3 startPosition, Vector3 targetPosition, float boxSize)
+		private static float EvaluateWeight(Vector3 currentPosition, Vector3 startPosition, Vector3 targetPosition, float boxSize, bool sameMap)
 		{
 			float from = Vector3.Distance(currentPosition, startPosition);
 			float to = Vector3.Distance(currentPosition, targetPosition);
-			return from + 2.0f*to - 4.0f*boxSize;
+			float mapFactor = sameMap ? 40 : 0.0f;
+			return from + 4.0f*to - 20.0f*boxSize - mapFactor;
 		}
 		
         private static List<NavigationPathPoint> QueryPathInternal(IMapGroup mapGroup, Vector3 startPositionWS, Vector3 targetPositionWS)
@@ -197,7 +198,7 @@ namespace VTNavigation.Navigation
 			HashSet<MapHashCode> visited = new HashSet<MapHashCode>();
 			HeapQueue<AStarNode> queue = new HeapQueue<AStarNode>(100);
 
-			queue.Enqueue(new AStarNode(EvaluateWeight(startPositionWS, startPositionWS, targetPositionWS, 1), null, startMap, startHashCode));
+			queue.Enqueue(new AStarNode(EvaluateWeight(startPositionWS, startPositionWS, targetPositionWS, 1, targetMap == startMap), null, startMap, startHashCode));
 			visited.Add(new MapHashCode(){map = startMap, hashCode = startHashCode});
 			
 			AStarNode targetNode = null;
@@ -224,7 +225,7 @@ namespace VTNavigation.Navigation
 						HashCode nextHashCode = walkableAreas[i].hashCode;
 						Bounds nextBox = nextHashCode.DecodeBounds();
 						Vector3 centerWS = nextMap.ToWorldSpace(nextBox.center);
-						float weight = EvaluateWeight(centerWS, startPositionWS, targetPositionWS, nextBox.size.x);
+						float weight = EvaluateWeight(centerWS, startPositionWS, targetPositionWS, nextBox.size.x, currentMap == targetMap);
 						queue.Enqueue(new AStarNode(weight, currentNode,nextMap, nextHashCode));
 						visited.Add(walkableAreas[i]);
 					}

@@ -22,10 +22,11 @@ namespace VTNavigation.Demo
 				INavService navigationService = ServiceLocator.Instance.GetService<INavService>();
 				if (navigationService != null)
 				{
-					// List<Vector3> path = navigationService.QueryPath(GameManager.Instance.Map, transform.position, targetPosition, true);
+					yield return new WaitUntil(() => Input.GetKeyDown(KeyCode.Space));
+					List<Vector3> path = navigationService.QueryPath(GameManager.Instance.Map, transform.position, targetPosition, true);
 
-					List<Vector3> path = new List<Vector3>();
-					yield return navigationService.QueryPathAsync(GameManager.Instance.Map, transform.position, targetPosition, path, true);
+					// List<Vector3> path = new List<Vector3>();
+					// yield return navigationService.QueryPathAsync(GameManager.Instance.Map, transform.position, targetPosition, path, true);
 					
 					if (path.Count > 0)
 					{

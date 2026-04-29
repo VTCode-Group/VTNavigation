@@ -232,6 +232,9 @@ namespace VTNavigation.Scene
 						m_VTScenes[index] = new VTScene();
 						string path = Path.Combine(directory, sceneName + $"_{x}_{y}_{z}.vtscene");
 						m_VTScenes[index].ReadFromFile(path);
+						m_VTScenes[index].XIndex = x;
+						m_VTScenes[index].YIndex = y;
+						m_VTScenes[index].ZIndex = z;
 					}
 				}
 			}
